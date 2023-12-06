@@ -11,6 +11,8 @@ function Selector(; name = nothing, power = nothing, set = nothing, origin = not
     Selector(name, power, set, origin, maxpower, invert)
 end
 
+Base.broadcastable(s::Selector) = Ref(s)
+
 struct Card
     name::String
     power::Int
@@ -45,7 +47,7 @@ name(c::Card) = c.name
 origin(c::Card) = c.origin
 set(c::Card) = c.set
 
-
+Base.broadcastable(c::Card) = Ref(c)
 
 includet("cards.jl")
 
@@ -81,6 +83,8 @@ function State(deck1, deck2; copydecks = true, shuffle = false)
     shuffle && (shuffle!(deck1); shuffle!(deck2))
     State(false, (deck1, deck2), (Card[], Card[]), (Card[], Card[]))
 end
+
+Base.broadcastable(s::State) = Ref(s)
 
 function power(card::Card, state::State, player, flag = false)
     power = card.power
@@ -166,6 +170,11 @@ function execute!(state, effect, selector, player, value)
         end
         for _ in 1:value
             pushfirst!(deck, rand(cards))
+        end
+    elseif effect == :removebenchopponent
+        for _ in 1:value
+            i = findfirst(c -> c.frombench.value != 0, bench)
+            !isnothing(i) && popat!(bench, i)
         end
     elseif effect == :sorttop
         n = min(length(deck), value)

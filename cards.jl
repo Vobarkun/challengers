@@ -92,7 +92,7 @@ const shipwreck = Dict(
     "lifeguard" => Card("Lifeguard", 4, "shipwreck", "B", ongoing = (Selector(), :deck, false, false, 2)),
     # "navigator" => Card("Navigator", 4, "shipwreck", "B", flagloss = ), # lookat
     "shark"     => Card("Shark", 5, "shipwreck", "B"),
-    # "siren"     => Card("Siren", 6, "shipwreck", "C", onplay = (Selector(), :removebench, true, false, 1)),
+    "siren"     => Card("Siren", 6, "shipwreck", "C", onplay = (Selector(), :removebenchopponent, true, false, 1)),
     "kraken"    => Card("Kraken", 7, "shipwreck", "C"),
     "submarine" => Card("Submarine", 9, "shipwreck", "C", onplay = (Selector(), :removebottom, false, false, 1)),
 );
