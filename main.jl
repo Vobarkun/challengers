@@ -65,6 +65,18 @@ setcolor(c::Card) = setcolor(c.set)
 
 Base.broadcastable(c::Card) = Ref(c)
 
+function Base.:(==)(c1::Card, c2::Card)
+    c1.name == c2.name && c1.power == c2.power && c1.set == c2.set && c1.tier == c2.tier && c1.effect == c2.effect
+end
+
+function Base.hash(c::Card, h::UInt)
+    h = hash(c.name, h)
+    h = hash(c.power, h)
+    h = hash(c.set, h)
+    h = hash(c.tier, h)
+    h = hash(c.effect, h)
+end
+
 function matches(s::Selector, c::Card)
     !isnothing(s.name) && s.name != c.name && return s.invert
     s.minpower > c.power && return s.invert
@@ -78,7 +90,12 @@ includet("cards.jl")
 
 
 function Base.string(c::Card)
-    "$(c.name) $(c.power)"
+    s = "Card(\"$(c.name)\", $(c.power), c.set, c.tier"
+    if c.effect.trigger != notrigger
+        s *= ", Effect($(c.effect.trigger), ...)"
+    end
+    s *= ")"
+    s
 end
 
 function Base.show(io::IO, c::Card)
@@ -91,6 +108,83 @@ function Base.show(io::IO, c::Card)
     print(io, ")")
 end
 
+
+struct CardPile
+    drawpiles::Dict{Tier,Vector{Card}}
+    returnpiles::Dict{Tier,Vector{Card}}
+end
+
+function CardPile() 
+    CardPile(
+        Dict(A => shuffle!(makepile(Acards)), B => shuffle!(makepile(Bcards)), C => shuffle!(makepile(Ccards))), 
+        Dict(A => Card[], B => Card[], C => Card[])
+    )
+end
+
+function draw!(pile::CardPile, tier)
+    dpile = pile.drawpiles[tier]; rpile = pile.returnpiles[tier]
+    if isempty(dpile)
+        append!(dpile, rpile)
+        shuffle!(dpile)
+        empty!(rpile)
+    end
+    pop!(dpile)
+end
+
+function draw!(to, pile::CardPile, tier::Tier, n)
+    for i in 1:n
+        push!(to, draw!(pile, tier))
+    end
+    to
+end
+
+function draw(pile::CardPile, tier::Tier, n)
+    draw!(Card[], pile, tier, n)
+end
+
+function return!(pile::CardPile, card::Card)
+    (card.tier == S || card.tier == notier) && return pile
+    push!(pile.returnpiles[card.tier], card)
+end
+
+function return!(pile::CardPile, cards)
+    for c in cards return!(pile, c) end
+    empty!(cards)
+end
+
+mutable struct Deck
+    nunique::Int
+    cards::Vector{Card}
+end
+
+Deck(cards) = Deck(length(unique(cards)), cards)
+Deck() = Deck(0, Card[]);
+
+function Base.push!(deck::Deck, card)
+    deck.nunique += !in(card, deck.cards)
+    push!(deck.cards, card)
+    powers = [power(c) * sum(isequal(c), deck) for c in deck.cards]
+    deck.cards .= deck.cards[sortperm(powers)]
+    deck
+end
+
+Base.copy(deck::Deck) = Deck(deck.nunique, copy(deck.cards))
+
+function Base.popfirst!(deck::Deck)
+    c = popfirst!(deck.cards)
+    if !isempty(deck.cards) && c != deck[cards][1]
+        deck.nunique -= 1
+    end
+end
+
+function trim!(deck::Deck)
+    while deck.nunique > 6
+        popfirst!(deck)
+    end
+    deck
+end
+
+
 mutable struct State
     toplay::Bool
     const deck::Tuple{Vector{Card}, Vector{Card}}
@@ -98,6 +192,7 @@ mutable struct State
     const field::Tuple{Vector{Card}, Vector{Card}}
     const nbench::MVector{2, Int}
     const comic::MVector{2, Int}
+    const fans::MVector{2, Int}
 end
 
 function State()
@@ -107,17 +202,19 @@ end
 function State(deck1, deck2; copydecks = true, shuffle = false)
     copydecks && (deck1 = copy(deck1); deck2 = copy(deck2))
     shuffle && (shuffle!(deck1); shuffle!(deck2))
-    State(false, (deck1, deck2), (Card[], Card[]), (Card[], Card[]), [0,0], [0,0])
+    State(false, (deck1, deck2), (Card[], Card[]), (Card[], Card[]), MVector(0,0), MVector(0,0), MVector(0,0))
 end
 
 Base.broadcastable(s::State) = Ref(s)
-Base.copy(state::State) = State(state.toplay, copy.(state.deck), copy.(state.bench), copy.(state.field), copy(state.nbench))
+Base.copy(state::State) = State(state.toplay, copy.(state.deck), copy.(state.bench), copy.(state.field), copy(state.nbench), copy(state.comic), copy(state.fans))
 
 function Base.empty!(state::State)
     empty!(state.bench[1]); empty!(state.bench[2])
     empty!(state.field[1]); empty!(state.field[2])
     empty!(state.deck[1]); empty!(state.deck[2])
     state.nbench .= 0
+    state.comic .= 0
+    state.fans .= 0
     state
 end
 
@@ -344,9 +441,6 @@ end
 
 simulate(state::State; kwargs...) = simulate!(copy(state); kwargs...)
 
-function winrate(state::State; kwargs...)
-    winrate(k -> state; kwargs...)
-end
 
 function winrate(f::Function; randomplayer = true, nsamples = 1000, shuffledecks = true, showprogress = false, state = State())
     prog = Progress(nsamples, enabled = showprogress)
@@ -360,6 +454,11 @@ function winrate(f::Function; randomplayer = true, nsamples = 1000, shuffledecks
         w == 1
     end / nsamples
 end
+
+winrate(state::State; kwargs...) = winrate(k -> state; kwargs...)
+winrate(deck::Vector{Card}, opponents; kwargs...) = winrate(k -> (deck = (deck, opponents[mod1(k, length(opponents))]),); kwargs...)
+winrate(deck::Vector{Card}, opponent::Vector{Card}; kwargs...) = winrate(deck, (opponent, ); kwargs...)
+
 
 function Base.show(io::IO, state::State)
     print(io, "Deck 1: "); print(io, length(state.deck[1])); print(io, " cards")
