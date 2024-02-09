@@ -7,7 +7,7 @@ const cards = [
     Card("Talent",          2, city,         A,  1, ),
     Card("Mascot",          2, city,         B,  6, Effect(ongoing, :unique)),
     Card("Dog",             3, city,         B,  2, ),
-    Card("Fan-bus",         6, city,         C,  8, Effect(onplay, :gainfans, strength = 2)), # three of fewer trophies
+    Card("Fan-bus",         6, city,         C,  8, Effect(onplay, :gainfansfewtrophies, strength = 2)), # three of fewer trophies
     Card("Champion",        4, city,         C,  3, ),
     
     Card("Jester",          1, castle,       A, 10,  Effect(ongoing, :atleast, Selector(power = 1), strength = 3)),
@@ -15,7 +15,7 @@ const cards = [
     Card("Hermit",          2, castle,       A, 12, Effect(ongoing, :nocards, Selector(set = city), strength = 2)),
     Card("Pig",             3, castle,       A, 13, ),
     Card("Blacksmith",      3, castle,       B, 14, Effect(frombench, Selector(set = city))),
-    Card("Knight",          3, castle,       B, 15, Effect(ongoing, whenattacking = true, strength = 3)),
+    Card("Knight",          3, castle,       B, 15, Effect(ongoing, :pertrophy, whenattacking = true, strength = 1)),
     Card("Sorcerer",        4, castle,       B, 16, Effect(onplay, :removebench, Selector(maxpower = 3))),
     Card("Horse",           5, castle,       B, 17, ),
     Card("Bard",            4, castle,       C, 18, Effect(frombench, Selector(), whenattacking = true)),
@@ -57,13 +57,13 @@ const cards = [
     Card("Vacuum Cleaner",  5, hauntedhouse, C, 51, Effect(onplay, :removebench, Selector(), strength = 2)),
     Card("Werewolf",        7, hauntedhouse, C, 52, ),
 
-    Card("Rescue Pod",      1, outerspace,   A, 53, Effect(onflagloss, :removebench, Selector(name = "Rescue Pod"))), # B on exhaust
+    Card("Rescue Pod",      1, outerspace,   A, 53, Effect(onflagloss, :rescuepod)),
     Card("Shapeshifter",    2, outerspace,   A, 54, ), # on pick remove card to gain extra card
     Card("A.I.",            2, outerspace,   A, 55, Effect(frombench, Selector(power = 2))),
     Card("Cow",             3, outerspace,   A, 56, ),
     Card("Band",            3, outerspace,   B, 57, Effect(frombench, Selector(set = outerspace))),
     Card("Ufo",             3, outerspace,   B, 58, Effect(onplay, :putunderdeck, Selector(tier = A), strength = 2)),
-    Card("Clones",          4, outerspace,   B, 59, ), # on pick gain 1 fan
+    Card("Clones",          4, outerspace,   B, 59, Effect(onpick, :gainfans, strength = 1)),
     Card("Alien",           5, outerspace,   B, 60, ),
     Card("Hologram",        4, outerspace,   C, 61, Effect(onplay, :putondeck, Selector(tier = B), foropponent = true)),
     Card("Sci-fi Geek",     6, outerspace,   C, 62, ), # on pick remove two outerspace card to gain 1 card

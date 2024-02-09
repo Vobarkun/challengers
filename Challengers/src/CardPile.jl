@@ -37,6 +37,5 @@ function ret!(pile::CardPile, card::Card)
 end
 
 function ret!(pile::CardPile, cards)
-    for c in cards return!(pile, c) end
-    empty!(cards)
+    for c in cards ret!(pile, c) end
 end

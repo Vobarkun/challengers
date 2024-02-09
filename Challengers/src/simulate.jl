@@ -33,6 +33,8 @@ function power(card::Card, state::State, player, hasflag = false)
                 power += card.effect.strength * (6 - state.nbench[player])
             elseif card.effect.keyword == :constant
                 power += card.effect.strength
+            elseif card.effect.keyword == :pertrophy
+                power += card.effect.strength * state.ntrophies[ifelse(player == 1, 2, 1)]
             end
         end
     end
@@ -76,7 +78,9 @@ function execute!(state, keyword, selector, player, strength)
             filter(c -> matches(selector, c), cards)
         end
         for _ in 1:strength
-            push!(deck, rand(cards))
+            card = rand(cards)
+            push!(deck, card)
+            push!(state.gained[player], card)
         end
     elseif keyword == :putunderdeck
         cards = if !isnothing(selector.tier)
@@ -85,15 +89,29 @@ function execute!(state, keyword, selector, player, strength)
             filter(c -> matches(selector, c), cards)
         end
         for _ in 1:strength
-            pushfirst!(deck, rand(cards))
+            card = rand(cards)
+            pushfirst!(deck, card)
+            push!(state.gained[player], card)
         end
     elseif keyword == :removebenchopponent
         for _ in 1:strength
             i = findfirst(c -> c.effect == frombench, bench)
             !isnothing(i) && removebench!(state, player, i)
         end
+    elseif keyword == :rescuepod
+        i = findfirst(c -> matches(Selector(name = "Rescue Pod"), c), bench)
+        if !isnothing(i)
+            push!(state.lost[player], removebench!(state, player, i))
+            push!(state.gained[player], rand(Bcards))
+        end
     elseif keyword == :comic
         state.comic[player] = strength
+    elseif keyword == :gainfans
+        state.fans[player] += strength
+    elseif keyword == :gainfansfewtrophies
+        if state.ntrophies[player] <= 3
+            state.fans[player] += strength
+        end
     elseif keyword == :sorttop
         n = min(length(deck), strength)
         n <= 1 && return
@@ -157,6 +175,13 @@ function onflagloss!(card::Card, state::State, player)
     end
 end
 
+struct SimulationResult
+    winner::Int
+    gainedCards::Tuple{Vector{Card}, Vector{Card}}
+    lostCards::Tuple{Vector{Card}, Vector{Card}}
+    gainedFans::SVector{2, Int}
+end
+
 function simulate!(state::State; output = false)
     (; deck, bench, field, nbench) = state
 
@@ -165,7 +190,7 @@ function simulate!(state::State; output = false)
 
         if isempty(deck[a])
             output && println("Player $a empty deck")
-            return d
+            return SimulationResult(d, state.gained, state.lost, state.fans)
         end
         card = pop!(deck[a])
         push!(field[a], card)
@@ -187,12 +212,12 @@ function simulate!(state::State; output = false)
         end
         if nbench[d] > 6
             output && println("Player $d bench full")    
-            return a
+            return SimulationResult(a, state.gained, state.lost, state.fans)
         end
     
         output && (show(state); println())
     end
-    0
+    SimulationResult(0, state.gained, state.fans)
 end
 
 simulate(state::State; kwargs...) = simulate!(copy(state); kwargs...)
@@ -223,7 +248,7 @@ function winrate(f::Function; randomplayer = true, nsamples = 1000, shuffledecks
         shuffledecks && shuffle!(state.deck[1])
         shuffledecks && shuffle!(state.deck[2])
         randomplayer && (state.toplay = rand(Bool))
-        w = simulate!(state)
+        w = simulate!(state).winner
         next!(prog)
         w == 1
     end / nsamples

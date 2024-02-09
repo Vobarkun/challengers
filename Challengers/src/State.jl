@@ -3,9 +3,12 @@ mutable struct State
     const deck::Tuple{Vector{Card}, Vector{Card}}
     const bench::Tuple{Vector{Card}, Vector{Card}}
     const field::Tuple{Vector{Card}, Vector{Card}}
+    const gained::Tuple{Vector{Card}, Vector{Card}}
+    const lost::Tuple{Vector{Card}, Vector{Card}}
     const nbench::MVector{2, Int}
     const comic::MVector{2, Int}
     const fans::MVector{2, Int}
+    const ntrophies::MVector{2, Int}
 end
 
 function State()
@@ -15,19 +18,23 @@ end
 function State(deck1, deck2; copydecks = true, shuffle = false)
     copydecks && (deck1 = copy(deck1); deck2 = copy(deck2))
     shuffle && (shuffle!(deck1); shuffle!(deck2))
-    State(false, (deck1, deck2), (Card[], Card[]), (Card[], Card[]), MVector(0,0), MVector(0,0), MVector(0,0))
+    State(false, (deck1, deck2), (Card[], Card[]), (Card[], Card[]), (Card[], Card[]), (Card[], Card[]), MVector(0,0), MVector(0,0), MVector(0,0),  MVector(0,0))
 end
 
 Base.broadcastable(s::State) = Ref(s)
-Base.copy(state::State) = State(state.toplay, copy.(state.deck), copy.(state.bench), copy.(state.field), copy(state.nbench), copy(state.comic), copy(state.fans))
+Base.copy(state::State) = State(state.toplay, copy.(state.deck), copy.(state.bench), copy.(state.field), copy.(state.gained), copy.(state.lost), 
+                                copy(state.nbench), copy(state.comic), copy(state.fans), copy(state.ntrophies))
 
 function Base.empty!(state::State)
     empty!(state.bench[1]); empty!(state.bench[2])
     empty!(state.field[1]); empty!(state.field[2])
+    empty!(state.gained[1]); empty!(state.gained[2])
+    empty!(state.lost[1]); empty!(state.lost[2])
     empty!(state.deck[1]); empty!(state.deck[2])
     state.nbench .= 0
     state.comic .= 0
     state.fans .= 0
+    state.ntrophies .= 0
     state
 end
 

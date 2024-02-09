@@ -4,7 +4,7 @@ using StaticArrays, StatsBase, Random, ProgressMeter
 
 @enum Set city castle filmstudio funfair hauntedhouse shipwreck outerspace noset
 @enum Tier S A B C notier
-@enum Trigger frombench ongoing onplay onflagloss notrigger
+@enum Trigger frombench ongoing onplay onflagloss onpick notrigger
 
 function setcolor(s::Set)
     Dict(castle => "#3d87bf", city => "#7ec4da", filmstudio => "#53921a", funfair => "#f9b322", hauntedhouse => "#f1822d", outerspace => "#d9080a", shipwreck => "#8b318b", noset => "#ffffff")[s]
@@ -24,5 +24,6 @@ export Deck, optimize!
 export State, reset!, addbench!, removebench!
 export simulate!, simulate, winrate
 export makepile, Acards, Bcards, Ccards, Scards, Cards
+export Player, play!, pickCards!
 
 end # module Challengers
